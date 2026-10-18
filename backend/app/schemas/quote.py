@@ -11,6 +11,7 @@ from app.schemas.tour_service import TourServiceRead
 from app.schemas.transport_service import TransportServiceRead
 from app.schemas.payment import PaymentRead
 from app.schemas.payment_schedule import PaymentScheduleRead
+from app.schemas.passenger import PassengerRead
 
 
 class ClientSummary(BaseModel):
@@ -54,7 +55,6 @@ class QuoteCreate(QuoteDatesMixin):
     model_config = ConfigDict(extra="forbid")
 
     client_id: uuid.UUID
-    seller_id: uuid.UUID
     branch_id: uuid.UUID
     status: QuoteStatus = QuoteStatus.PENDING
     sale_date: datetime
@@ -76,7 +76,6 @@ class QuoteUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     client_id: uuid.UUID | None = None
-    seller_id: uuid.UUID | None = None
     branch_id: uuid.UUID | None = None
     status: QuoteStatus | None = None
     sale_date: datetime | None = None
@@ -119,6 +118,7 @@ class QuoteRead(BaseModel):
     flights: list[FlightServiceRead] = Field(validation_alias="flight_services")
     payments: list[PaymentRead]
     payment_schedule: list[PaymentScheduleRead]
+    passengers: list[PassengerRead]
     created_at: datetime
     updated_at: datetime
 

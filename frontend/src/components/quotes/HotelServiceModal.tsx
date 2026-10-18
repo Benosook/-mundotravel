@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+import { useEffect } from 'react'
 import { z } from 'zod'
-import { hotelOperators, hotelPlans, hotelPurchaseMethods } from '../../data/quotes'
+import { hotelOperators, hotelPlans, hotelPurchaseMethods } from '../../data/serviceCatalogs'
 import type { HotelService } from '../../types/quote'
 import { ModalShell } from '../ui/ModalShell'
 
@@ -30,7 +31,8 @@ type HotelFormData = z.infer<typeof hotelSchema>
 type HotelServiceModalProps = {
   open: boolean
   onClose: () => void
-  onSave: (hotel: HotelService) => void
+  onSave: (hotel: HotelService) => void | Promise<void>
+  initialValue?: HotelService | null
 }
 
 const defaultValues: HotelFormData = {
@@ -51,7 +53,7 @@ const defaultValues: HotelFormData = {
 const inputClass =
   'mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-3 focus:ring-blue-100'
 
-export function HotelServiceModal({ open, onClose, onSave }: HotelServiceModalProps) {
+export function HotelServiceModal({ open, onClose, onSave, initialValue }: HotelServiceModalProps) {
   const {
     register,
     handleSubmit,
@@ -61,6 +63,7 @@ export function HotelServiceModal({ open, onClose, onSave }: HotelServiceModalPr
     resolver: zodResolver(hotelSchema),
     defaultValues,
   })
+  useEffect(() => { if (open) reset(initialValue ? { ...initialValue } : defaultValues) }, [open, initialValue, reset])
 
   const closeModal = () => {
     if (isSubmitting) return
@@ -68,8 +71,8 @@ export function HotelServiceModal({ open, onClose, onSave }: HotelServiceModalPr
     onClose()
   }
 
-  const submitHotel = (data: HotelFormData) => {
-    onSave({ id: crypto.randomUUID(), type: 'hotel', ...data })
+  const submitHotel = async (data: HotelFormData) => {
+    await onSave({ id: initialValue?.id ?? crypto.randomUUID(), type: 'hotel', ...data })
     reset(defaultValues)
     onClose()
   }
@@ -77,9 +80,9 @@ export function HotelServiceModal({ open, onClose, onSave }: HotelServiceModalPr
   const errorClass = 'mt-1 block text-xs text-red-600'
 
   return (
-    <ModalShell open={open} title="Agregar servicio - Hotel" titleId="hotel-modal-title" onClose={closeModal} closeDisabled={isSubmitting}>
+    <ModalShell open={open} title={initialValue ? "Editar servicio - Hotel" : "Agregar servicio - Hotel"} titleId="hotel-modal-title" onClose={closeModal} closeDisabled={isSubmitting}>
         <form onSubmit={handleSubmit(submitHotel)} className="flex min-h-0 flex-1 flex-col">
-          <div className="grid grid-cols-1 gap-5 overflow-y-auto px-6 py-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 overflow-y-auto px-4 py-4 sm:grid-cols-2 sm:gap-5 sm:px-6 sm:py-5">
             <label className="text-sm font-medium text-slate-700 sm:col-span-2">
               Método de compra <span className="text-red-500">*</span>
               <select {...register('purchaseMethod')} className={inputClass} aria-invalid={Boolean(errors.purchaseMethod)}>
@@ -169,12 +172,12 @@ export function HotelServiceModal({ open, onClose, onSave }: HotelServiceModalPr
             </label>
           </div>
 
-          <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <div className="grid grid-cols-2 gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3 sm:flex sm:justify-end sm:px-6 sm:py-4">
             <button type="button" onClick={closeModal} disabled={isSubmitting} className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
               Cancelar
             </button>
             <button type="submit" disabled={isSubmitting} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
-              Agregar Hotel
+              {initialValue ? 'Guardar cambios' : 'Agregar Hotel'}
             </button>
           </div>
         </form>

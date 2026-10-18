@@ -4,6 +4,7 @@ from datetime import date, datetime, timezone
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
+from app.core.config import settings
 from app.database.session import SessionLocal
 from app.main import app
 from app.models.branch import Branch
@@ -19,7 +20,7 @@ def verify() -> None:
 
     with SessionLocal() as db:
         branch = db.scalar(select(Branch).where(Branch.name == "+MundoTravel Principal"))
-        seller = db.scalar(select(User).where(User.email == "frida@mundotravel.local"))
+        seller = db.scalar(select(User).where(User.email == settings.DEV_USER_EMAIL))
         assert branch is not None and seller is not None
         branch_id, seller_id = str(branch.id), str(seller.id)
 

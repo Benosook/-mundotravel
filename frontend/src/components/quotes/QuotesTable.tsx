@@ -30,7 +30,8 @@ export function QuotesTable({ quotes, onClearFilters }: QuotesTableProps) {
         <h2 className="m-0 text-sm font-semibold text-slate-800">Cotizaciones encontradas</h2>
         <span className="text-xs font-medium text-slate-500">{quotes.length} registros</span>
       </div>
-      <div className="overflow-x-auto">
+      <div className="divide-y divide-slate-100 md:hidden">{quotes.map(quote=><article key={quote.id} className="space-y-3 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="m-0 break-words text-sm font-bold text-blue-700">{quote.folio}</p><h3 className="mb-0 mt-1 break-words text-base font-semibold text-slate-900">{quote.clientName}</h3></div><QuoteStatusBadge status={quote.status}/></div><dl className="grid grid-cols-2 gap-3 text-sm"><div><dt className="text-xs text-slate-400">Destino</dt><dd className="m-0 mt-1 break-words">{quote.destination}</dd></div><div><dt className="text-xs text-slate-400">Salida</dt><dd className="m-0 mt-1">{formatDate(quote.departureDate)}</dd></div><div className="col-span-2"><dt className="text-xs text-slate-400">Precio público</dt><dd className="m-0 mt-1 font-bold">{formatCurrency(quote.publicPrice)}</dd></div></dl><Link to={`/cotizaciones/${quote.id}`} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white">Ver cotización <ArrowRight size={16}/></Link></article>)}</div>
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-320 border-collapse text-left text-sm">
           <thead>
             <tr className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">

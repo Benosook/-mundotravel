@@ -2,14 +2,16 @@ import uuid
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.api.dependencies import get_current_user
 from app.models.quote import Quote, QuoteStatus
+from app.models.user import User
 from app.schemas.quote import QuoteCreate, QuoteListItem, QuoteRead, QuoteUpdate
 from app.services import BusinessRuleError, ConflictError, ResourceNotFoundError
-from app.services.quote_service import create_quote, get_quote, list_quotes, update_quote
+from app.services.quote_service import create_quote, delete_quote, get_quote, list_quotes, update_quote
 
 
 router = APIRouter(prefix="/quotes", tags=["Quotes"])
@@ -44,9 +46,13 @@ def _business_error(exc: Exception) -> HTTPException:
 
 
 @router.post("", response_model=QuoteRead, status_code=status.HTTP_201_CREATED)
-def create_quote_endpoint(payload: QuoteCreate, db: DbSession) -> QuoteRead:
+def create_quote_endpoint(
+    payload: QuoteCreate,
+    db: DbSession,
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> QuoteRead:
     try:
-        return QuoteRead.model_validate(create_quote(db, payload))
+        return QuoteRead.model_validate(create_quote(db, payload, current_user.id))
     except (ResourceNotFoundError, BusinessRuleError) as exc:
         raise _business_error(exc) from exc
     except ConflictError as exc:
@@ -105,3 +111,15 @@ def update_quote_endpoint(quote_id: uuid.UUID, payload: QuoteUpdate, db: DbSessi
         raise _business_error(exc) from exc
     except ConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+
+@router.delete("/{quote_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_quote_endpoint(quote_id: uuid.UUID, db: DbSession) -> Response:
+    quote = get_quote(db, quote_id)
+    if quote is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Cotización no encontrada.")
+    try:
+        delete_quote(db, quote)
+    except ConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

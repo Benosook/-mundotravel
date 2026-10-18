@@ -49,5 +49,6 @@ class PaymentRead(PaymentCreate):
     id: uuid.UUID
     quote_id: uuid.UUID
     user_id: uuid.UUID | None
+    user_name: str | None = None
     created_at: datetime
     updated_at: datetime

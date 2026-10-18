@@ -36,24 +36,24 @@ export function ModalShell({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4" role="presentation">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-2 sm:p-4" role="presentation">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`flex max-h-[calc(100vh-2rem)] w-full flex-col overflow-hidden rounded-xl bg-white shadow-2xl ${maxWidthClass}`}
+        className={`flex max-h-[calc(100dvh-1rem)] w-full flex-col overflow-hidden rounded-lg bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-xl ${maxWidthClass}`}
       >
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-          <div>
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-6 sm:py-4">
+          <div className="min-w-0">
             <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-600">{eyebrow}</p>
-            <h2 id={titleId} className="m-0 text-lg font-bold text-slate-900">{title}</h2>
+            <h2 id={titleId} className="m-0 break-words text-base font-bold text-slate-900 sm:text-lg">{title}</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={closeDisabled}
             aria-label={`Cerrar ${title}`}
-            className="grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="grid size-11 shrink-0 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50 sm:size-10"
           >
             <X size={20} aria-hidden="true" />
           </button>

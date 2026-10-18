@@ -2,6 +2,8 @@
 
 Backend de la aplicacion interna de +MundoTravel, construido con FastAPI, SQLAlchemy 2 y PostgreSQL. Alembic administra todos los cambios del esquema; la aplicacion no crea tablas automaticamente.
 
+Para desplegar el backend y PostgreSQL en Render, consulta la guia paso a paso [RENDER.md](RENDER.md).
+
 ## Requisitos
 
 - Python 3.11 o superior.
@@ -74,9 +76,9 @@ python -m scripts.seed_dev
 Crea o reutiliza solamente:
 
 - Sucursal: `+MundoTravel Principal`
-- Vendedor: `Frida` (`frida@mundotravel.local`)
+- Vendedora configurada mediante `DEV_USER_NAME` y `DEV_USER_EMAIL`.
 
-El `password_hash` del vendedor es un marcador no utilizable; la autenticacion aun no existe.
+La contraseña local se obtiene de `DEV_USER_PASSWORD` y se guarda únicamente como hash Argon2.
 
 ## Ejecutar pruebas
 
@@ -138,7 +140,7 @@ CORS permite durante desarrollo unicamente el origen configurado en `FRONTEND_OR
 
 Los totales monetarios almacenados en `quotes` (`net_price`, `public_price`, `total_paid` y `remaining_balance`) seran mantenidos exclusivamente por logica del backend en fases posteriores. El frontend nunca sera la fuente de verdad.
 
-El frontend todavia utiliza datos mock y no consume estos endpoints.
+El frontend consume estos endpoints mediante `VITE_API_BASE_URL`. El dashboard conserva datos demostrativos hasta contar con un endpoint agregado.
 
 ## Servicios de viaje
 
@@ -240,3 +242,22 @@ Para ejecutar la verificacion financiera completa con datos temporales controlad
 ```powershell
 python -m scripts.verify_phase19
 ```
+
+## Autenticación
+
+Configura valores propios en `.env`:
+
+```env
+AUTH_SECRET_KEY=replace-with-a-long-random-secret
+ACCESS_TOKEN_EXPIRE_MINUTES=480
+JWT_ALGORITHM=HS256
+DEV_USER_NAME=Ariadna
+DEV_USER_EMAIL=ariadna@mundotravel.local
+DEV_USER_PASSWORD=ChangeMe123!
+```
+
+Ejecuta `python -m scripts.seed_dev`. El seed crea o actualiza a la usuaria configurada con un hash Argon2; nunca almacena la contraseña en texto plano y puede ejecutarse varias veces.
+
+Inicia sesión con `POST /api/v1/auth/login` enviando `email` y `password`. `GET /api/v1/auth/me` devuelve el usuario del Bearer token. En `/docs`, usa **Authorize** y pega el token obtenido en login.
+
+Clientes, cotizaciones, servicios, pasajeros, pagos y anticipos requieren autenticación; health permanece público. Al crear una cotización, `seller_id` se toma exclusivamente del usuario autenticado. El API rechaza un `seller_id` enviado en el cuerpo y el vendedor tampoco puede modificarse mediante PATCH.

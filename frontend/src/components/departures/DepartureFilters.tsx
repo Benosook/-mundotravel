@@ -10,7 +10,7 @@ type Props = {
   onClear: () => void
 }
 
-const inputClass = 'mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-3 focus:ring-blue-100'
+const inputClass = 'mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-3 focus:ring-blue-100'
 const statuses: Array<{ value: DepartureStatus; label: string }> = [
   { value: 'confirmed', label: 'Confirmado' }, { value: 'pending', label: 'Pendiente' },
   { value: 'cancelled', label: 'Cancelado' }, { value: 'completed', label: 'Completado' },

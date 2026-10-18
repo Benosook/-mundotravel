@@ -1,6 +1,4 @@
 export type DepartureStatus = 'confirmed' | 'pending' | 'cancelled' | 'completed'
-export type DocumentStatus = 'complete' | 'pending' | 'attention'
-
 export type UpcomingDeparture = {
   id: string
   quoteId: string
@@ -16,7 +14,6 @@ export type UpcomingDeparture = {
   returnDate: string
   publicPrice: number
   status: DepartureStatus
-  documentStatus: DocumentStatus
 }
 
 export type DepartureFiltersValue = {

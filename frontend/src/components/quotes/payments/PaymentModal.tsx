@@ -17,7 +17,7 @@ type PaymentModalProps = {
   remainingBalance: number
   payments: Payment[]
   onClose: () => void
-  onSave: (payment: Payment) => void
+  onSave: (payment: Omit<Payment, 'id' | 'userName'>) => void | Promise<void>
 }
 
 const paymentTypes: Array<{ value: PaymentType; label: string }> = [
@@ -52,10 +52,10 @@ export function PaymentModal(props: PaymentModalProps) {
     props.onClose()
   }
 
-  const submitPayment = (data: PaymentFormData) => {
+  const submitPayment = async (data: PaymentFormData) => {
     if (props.remainingBalance <= 0) return
-    props.onSave({
-      id: crypto.randomUUID(), quoteId: props.quoteId, date: data.date, userName: 'Frida',
+    await props.onSave({
+      quoteId: props.quoteId, date: data.date,
       paymentType: data.paymentType, currency: 'MXN', amount: data.amount, status: 'confirmed', comment: data.comment,
     })
     setSuccess(true)

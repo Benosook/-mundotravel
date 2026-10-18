@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+import { useEffect } from 'react'
 import { z } from 'zod'
-import { hotelOperators, hotelPurchaseMethods } from '../../data/quotes'
+import { hotelOperators, hotelPurchaseMethods } from '../../data/serviceCatalogs'
 import type { TourService } from '../../types/quote'
 import { ModalShell } from '../ui/ModalShell'
 
@@ -33,7 +34,8 @@ type TourFormData = z.infer<typeof tourSchema>
 type TourServiceModalProps = {
   open: boolean
   onClose: () => void
-  onSave: (tour: TourService) => void
+  onSave: (tour: TourService) => void | Promise<void>
+  initialValue?: TourService | null
 }
 
 const defaultValues: TourFormData = {
@@ -51,7 +53,7 @@ const defaultValues: TourFormData = {
 const inputClass =
   'mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-3 focus:ring-blue-100'
 
-export function TourServiceModal({ open, onClose, onSave }: TourServiceModalProps) {
+export function TourServiceModal({ open, onClose, onSave, initialValue }: TourServiceModalProps) {
   const {
     register,
     handleSubmit,
@@ -61,6 +63,7 @@ export function TourServiceModal({ open, onClose, onSave }: TourServiceModalProp
     resolver: zodResolver(tourSchema),
     defaultValues,
   })
+  useEffect(() => { if (open) reset(initialValue ? { ...initialValue } : defaultValues) }, [open, initialValue, reset])
 
   const closeModal = () => {
     if (isSubmitting) return
@@ -68,8 +71,8 @@ export function TourServiceModal({ open, onClose, onSave }: TourServiceModalProp
     onClose()
   }
 
-  const submitTour = (data: TourFormData) => {
-    onSave({ id: crypto.randomUUID(), type: 'tour', ...data })
+  const submitTour = async (data: TourFormData) => {
+    await onSave({ id: initialValue?.id ?? crypto.randomUUID(), type: 'tour', ...data })
     reset(defaultValues)
     onClose()
   }
@@ -77,9 +80,9 @@ export function TourServiceModal({ open, onClose, onSave }: TourServiceModalProp
   const errorClass = 'mt-1 block text-xs text-red-600'
 
   return (
-    <ModalShell open={open} title="Agregar servicio - Tour" titleId="tour-modal-title" onClose={closeModal} closeDisabled={isSubmitting} maxWidthClass="max-w-2xl">
+    <ModalShell open={open} title={initialValue ? "Editar servicio - Tour" : "Agregar servicio - Tour"} titleId="tour-modal-title" onClose={closeModal} closeDisabled={isSubmitting} maxWidthClass="max-w-2xl">
         <form onSubmit={handleSubmit(submitTour)} className="flex min-h-0 flex-1 flex-col">
-          <div className="grid grid-cols-1 gap-5 overflow-y-auto px-6 py-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 overflow-y-auto px-4 py-4 sm:grid-cols-2 sm:gap-5 sm:px-6 sm:py-5">
             <label className="text-sm font-medium text-slate-700 sm:col-span-2">
               Método de compra <span className="text-red-500">*</span>
               <select {...register('purchaseMethod')} className={inputClass} aria-invalid={Boolean(errors.purchaseMethod)}>
@@ -149,12 +152,12 @@ export function TourServiceModal({ open, onClose, onSave }: TourServiceModalProp
             </label>
           </div>
 
-          <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <div className="grid grid-cols-2 gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3 sm:flex sm:justify-end sm:px-6 sm:py-4">
             <button type="button" onClick={closeModal} disabled={isSubmitting} className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
               Cancelar
             </button>
             <button type="submit" disabled={isSubmitting} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
-              Agregar Tour
+              {initialValue ? 'Guardar cambios' : 'Agregar Tour'}
             </button>
           </div>
         </form>

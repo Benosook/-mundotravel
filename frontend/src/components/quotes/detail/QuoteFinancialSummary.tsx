@@ -10,6 +10,7 @@ export function QuoteFinancialSummary({ publicPrice, netPrice, totalPaid, remain
       <dl className="mt-5 space-y-3 text-sm">
         <div className="flex justify-between gap-4"><dt className="text-slate-500">Precio público</dt><dd className="m-0 font-semibold text-slate-800">{formatCurrency(publicPrice)}</dd></div>
         <div className="flex justify-between gap-4"><dt className="text-slate-500">Precio neto</dt><dd className="m-0 font-semibold text-slate-800">{formatCurrency(netPrice)}</dd></div>
+        <div className="flex justify-between gap-4"><dt className="text-slate-500">Margen</dt><dd className="m-0 font-semibold text-emerald-700">{formatCurrency(publicPrice - netPrice)}</dd></div>
         <div className="flex justify-between gap-4"><dt className="text-slate-500">Total abonado</dt><dd className="m-0 font-semibold text-emerald-700">{formatCurrency(totalPaid)}</dd></div>
       </dl>
       <div className="mt-5 rounded-lg bg-blue-50 px-4 py-3">

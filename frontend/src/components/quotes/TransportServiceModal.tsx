@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
+import { useEffect } from 'react'
 import { z } from 'zod'
-import { hotelOperators, hotelPurchaseMethods, transportTypes } from '../../data/quotes'
+import { hotelOperators, hotelPurchaseMethods, transportTypes } from '../../data/serviceCatalogs'
 import type { TransportService } from '../../types/quote'
 import { ModalShell } from '../ui/ModalShell'
 
@@ -61,7 +62,8 @@ type TransportFormData = z.infer<typeof transportSchema>
 type TransportServiceModalProps = {
   open: boolean
   onClose: () => void
-  onSave: (transport: TransportService) => void
+  onSave: (transport: TransportService) => void | Promise<void>
+  initialValue?: TransportService | null
 }
 
 const defaultValues: TransportFormData = {
@@ -83,7 +85,7 @@ const defaultValues: TransportFormData = {
 const inputClass =
   'mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-3 focus:ring-blue-100'
 
-export function TransportServiceModal({ open, onClose, onSave }: TransportServiceModalProps) {
+export function TransportServiceModal({ open, onClose, onSave, initialValue }: TransportServiceModalProps) {
   const {
     register,
     handleSubmit,
@@ -91,6 +93,7 @@ export function TransportServiceModal({ open, onClose, onSave }: TransportServic
     watch,
     formState: { errors, isSubmitting },
   } = useForm<TransportFormData>({ resolver: zodResolver(transportSchema), defaultValues })
+  useEffect(() => { if (open) reset(initialValue ? { ...initialValue, returnDateTime: initialValue.returnDateTime ?? '' } : defaultValues) }, [open, initialValue, reset])
 
   const tripType = watch('tripType')
 
@@ -100,9 +103,9 @@ export function TransportServiceModal({ open, onClose, onSave }: TransportServic
     onClose()
   }
 
-  const submitTransport = (data: TransportFormData) => {
-    onSave({
-      id: crypto.randomUUID(),
+  const submitTransport = async (data: TransportFormData) => {
+    await onSave({
+      id: initialValue?.id ?? crypto.randomUUID(),
       type: 'transport',
       ...data,
       returnDateTime: data.tripType === 'one-way' ? undefined : data.returnDateTime,
@@ -114,9 +117,9 @@ export function TransportServiceModal({ open, onClose, onSave }: TransportServic
   const errorClass = 'mt-1 block text-xs text-red-600'
 
   return (
-    <ModalShell open={open} title="Agregar servicio - Transporte" titleId="transport-modal-title" onClose={closeModal} closeDisabled={isSubmitting}>
+    <ModalShell open={open} title={initialValue ? "Editar servicio - Transporte" : "Agregar servicio - Transporte"} titleId="transport-modal-title" onClose={closeModal} closeDisabled={isSubmitting}>
         <form onSubmit={handleSubmit(submitTransport)} className="flex min-h-0 flex-1 flex-col">
-          <div className="grid grid-cols-1 gap-5 overflow-y-auto px-6 py-5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 overflow-y-auto px-4 py-4 sm:grid-cols-2 sm:gap-5 sm:px-6 sm:py-5">
             <label className="text-sm font-medium text-slate-700 sm:col-span-2">
               Método de compra <span className="text-red-500">*</span>
               <select {...register('purchaseMethod')} className={inputClass}>
@@ -211,9 +214,9 @@ export function TransportServiceModal({ open, onClose, onSave }: TransportServic
             </label>
           </div>
 
-          <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <div className="grid grid-cols-2 gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3 sm:flex sm:justify-end sm:px-6 sm:py-4">
             <button type="button" onClick={closeModal} disabled={isSubmitting} className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
-            <button type="submit" disabled={isSubmitting} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">Agregar Transporte</button>
+            <button type="submit" disabled={isSubmitting} className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{initialValue ? 'Guardar cambios' : 'Agregar Transporte'}</button>
           </div>
         </form>
     </ModalShell>

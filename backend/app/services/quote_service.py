@@ -43,13 +43,14 @@ def _validate_dates(
         raise BusinessRuleError("La fecha límite de pago no puede ser posterior a la salida.")
 
 
-def create_quote(db: Session, data: QuoteCreate) -> Quote:
+def create_quote(db: Session, data: QuoteCreate, seller_id: uuid.UUID) -> Quote:
     _get_related(db, Client, data.client_id, "El cliente")
-    _get_related(db, User, data.seller_id, "El vendedor")
+    _get_related(db, User, seller_id, "El vendedor")
     _get_related(db, Branch, data.branch_id, "La sucursal")
 
     quote = Quote(
         **data.model_dump(),
+        seller_id=seller_id,
         folio=_generate_folio(db),
         public_price=ZERO,
         net_price=ZERO,
@@ -79,6 +80,7 @@ def get_quote(db: Session, quote_id: uuid.UUID) -> Quote | None:
             selectinload(Quote.flight_services),
             selectinload(Quote.payments),
             selectinload(Quote.payment_schedule),
+            selectinload(Quote.passengers),
         )
     )
     return db.scalar(statement)
@@ -131,8 +133,6 @@ def update_quote(db: Session, quote: Quote, data: QuoteUpdate) -> Quote:
 
     if "client_id" in changes:
         _get_related(db, Client, changes["client_id"], "El cliente")
-    if changes.get("seller_id") is not None:
-        _get_related(db, User, changes["seller_id"], "El vendedor")
     if "branch_id" in changes:
         _get_related(db, Branch, changes["branch_id"], "La sucursal")
 
@@ -149,3 +149,20 @@ def update_quote(db: Session, quote: Quote, data: QuoteUpdate) -> Quote:
         db.rollback()
         raise ConflictError("No fue posible actualizar la cotización con esos datos.") from exc
     return get_quote(db, quote.id)  # type: ignore[return-value]
+
+
+def delete_quote(db: Session, quote: Quote) -> None:
+    if quote.payments:
+        raise ConflictError(
+            "No se puede eliminar una cotización con pagos o abonos registrados. "
+            "Cancélala para conservar el historial financiero."
+        )
+
+    try:
+        db.delete(quote)
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise ConflictError(
+            "No fue posible eliminar la cotización porque tiene información relacionada."
+        ) from exc

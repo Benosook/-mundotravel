@@ -1,0 +1,3 @@
+import type { ApiTransport } from '../types/api'; import { apiRequest } from './api'
+type Input=Omit<ApiTransport,'id'|'quote_id'|'created_at'|'updated_at'>
+export const transportsApi = { create: (quoteId: string, input: Input) => apiRequest<ApiTransport>(`/quotes/${quoteId}/transports`, { method:'POST', body:JSON.stringify(input) }), update:(quoteId:string,id:string,input:Partial<Input>)=>apiRequest<ApiTransport>(`/quotes/${quoteId}/transports/${id}`,{method:'PATCH',body:JSON.stringify(input)}), remove: (quoteId:string,id:string)=>apiRequest<void>(`/quotes/${quoteId}/transports/${id}`,{method:'DELETE'}) }

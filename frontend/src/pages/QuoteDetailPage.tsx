@@ -1,115 +1,93 @@
-import { ArrowLeft, Ban, CircleDollarSign, Copy, FileText, Pencil, Plus } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, CircleDollarSign, FileText, Pencil, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { PassengersEditor } from '../components/quotes/PassengersEditor'
 import { QuoteStatusBadge } from '../components/quotes/QuoteStatusBadge'
-import { PassengersList } from '../components/quotes/detail/PassengersList'
 import { PaymentScheduleList } from '../components/quotes/detail/PaymentScheduleList'
 import { QuoteFinancialSummary } from '../components/quotes/detail/QuoteFinancialSummary'
 import { QuoteSaleInfo } from '../components/quotes/detail/QuoteSaleInfo'
 import { QuoteServices } from '../components/quotes/detail/QuoteServices'
 import { PaymentModal } from '../components/quotes/payments/PaymentModal'
 import { PaymentsHistory } from '../components/quotes/payments/PaymentsHistory'
-import { payments as paymentMocks } from '../data/payments'
-import { quoteDetails } from '../data/quoteDetails'
-
-const actions = [
-  { label: 'Abonar', icon: CircleDollarSign, tone: 'primary' },
-  { label: 'Añadir servicio', icon: Plus, tone: 'secondary' },
-  { label: 'Editar', icon: Pencil, tone: 'secondary' },
-  { label: 'Clonar', icon: Copy, tone: 'secondary' },
-  { label: 'Cancelar', icon: Ban, tone: 'danger' },
-] as const
+import { ErrorState, LoadingState } from '../components/ui/AsyncState'
+import { ModalShell } from '../components/ui/ModalShell'
+import { mapQuoteDetail } from '../services/mappers'
+import { passengersApi } from '../services/passengersApi'
+import { paymentsApi } from '../services/paymentsApi'
+import { quotesApi } from '../services/quotesApi'
+import type { QuoteDetail } from '../types/quote'
 
 export function QuoteDetailPage() {
   const { id } = useParams()
-  const [message, setMessage] = useState('')
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
-  const [localPayments, setLocalPayments] = useState(() => paymentMocks.filter((payment) => payment.quoteId === id))
-  const quote = quoteDetails.find((item) => item.id === id)
+  const navigate = useNavigate()
+  const [quote, setQuote] = useState<QuoteDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [paymentOpen, setPaymentOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
-  useEffect(() => {
-    setLocalPayments(paymentMocks.filter((payment) => payment.quoteId === id))
-    setIsPaymentModalOpen(false)
+  const load = useCallback(async () => {
+    if (!id) return
+    setLoading(true); setError('')
+    try { setQuote(mapQuoteDetail(await quotesApi.get(id))) }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'No encontramos la cotización.') }
+    finally { setLoading(false) }
   }, [id])
+  useEffect(() => { void load() }, [load])
 
-  const totalPaid = useMemo(
-    () => localPayments.reduce((total, payment) => payment.status === 'confirmed' ? total + payment.amount : total, 0),
-    [localPayments],
-  )
-  const remainingBalance = Math.max((quote?.publicPrice ?? 0) - totalPaid, 0)
-
-  if (!quote) {
-    return (
-      <section className="rounded-xl border border-slate-200 bg-white px-8 py-20 text-center shadow-sm shadow-slate-900/3">
-        <h1 className="m-0 text-2xl font-bold text-slate-900">Cotización no encontrada</h1>
-        <p className="mb-0 mt-2 text-sm text-slate-500">No pudimos encontrar la cotización solicitada.</p>
-        <Link to="/cotizaciones" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
-          <ArrowLeft size={16} aria-hidden="true" /> Volver al historial
-        </Link>
-      </section>
-    )
+  const syncPassengers = async (next: QuoteDetail['passengers']) => {
+    if (!id || !quote) return
+    try {
+      const previous = quote.passengers
+      for (const removed of previous.filter((item) => !next.some((candidate) => candidate.id === item.id))) await passengersApi.remove(id, removed.id)
+      for (const item of next) {
+        const old = previous.find((candidate) => candidate.id === item.id)
+        if (!old) await passengersApi.create(id, { name: item.name, age: item.age, passenger_type: item.type })
+        else if (old.name !== item.name || old.age !== item.age || old.type !== item.type) await passengersApi.update(id, item.id, { name: item.name, age: item.age, passenger_type: item.type })
+      }
+      await load()
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'No fue posible actualizar acompañantes.') }
   }
 
-  return (
-    <div className="space-y-6">
-      <Link to="/cotizaciones" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-700">
-        <ArrowLeft size={16} aria-hidden="true" /> Volver a cotizaciones
-      </Link>
+  if (loading) return <LoadingState label="Cargando detalle…" />
+  if (error && !quote) return <ErrorState message={error} onRetry={() => void load()} />
+  if (!quote) return null
+  const payments = quote.payments ?? []
 
-      <header className="rounded-xl border border-slate-200 border-l-4 border-l-blue-600 bg-white p-5 shadow-sm shadow-slate-900/3">
-        <div className="flex flex-wrap items-start justify-between gap-5">
-          <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="m-0 text-2xl font-bold tracking-tight text-slate-900">{quote.holderName}</h1>
-              <QuoteStatusBadge status={quote.status} />
-            </div>
-            <p className="mb-0 mt-2 text-sm font-semibold text-blue-700">{quote.folio}</p>
-            <p className="mb-0 mt-1 text-sm text-slate-500">Viaje a {quote.destination}</p>
-          </div>
-          <div className="flex flex-wrap justify-end gap-2">
-            <Link to={`/cotizaciones/${quote.id}/documento`} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-              <FileText size={16} aria-hidden="true" /> Documento
-            </Link>
-            {actions.map(({ label, icon: Icon, tone }) => (
-              <button key={label} type="button" onClick={() => label === 'Abonar' ? setIsPaymentModalOpen(true) : setMessage(`${label}: disponible en la siguiente fase.`)} className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-2.5 text-sm font-semibold transition ${tone === 'primary' ? 'bg-blue-600 text-white hover:bg-blue-700' : tone === 'danger' ? 'border border-red-200 bg-white text-red-600 hover:bg-red-50' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}>
-                <Icon size={16} aria-hidden="true" /> {label}
-              </button>
-            ))}
-          </div>
-        </div>
-        {message && <p role="status" className="mb-0 mt-4 rounded-lg bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700">{message}</p>}
-      </header>
+  const handleDelete = async () => {
+    if (!id) return
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      await quotesApi.remove(id)
+      navigate('/cotizaciones', { replace: true, state: { message: 'Cotización eliminada correctamente.' } })
+    } catch (reason) {
+      setDeleteError(reason instanceof Error ? reason.message : 'No fue posible eliminar la cotización.')
+    } finally {
+      setDeleting(false)
+    }
+  }
 
-      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[18rem_minmax(0,1fr)]">
-        <aside className="space-y-4">
-          <QuoteFinancialSummary publicPrice={quote.publicPrice} netPrice={quote.netPrice} totalPaid={totalPaid} remainingBalance={remainingBalance} />
-          <QuoteSaleInfo sellerName={quote.sellerName} branch={quote.branch} saleDate={quote.saleDate} paymentLimitDate={quote.paymentLimitDate} settlementDate={quote.settlementDate} departureDate={quote.departureDate} returnDate={quote.returnDate} />
-          <PassengersList passengers={quote.passengers} />
-          <PaymentScheduleList schedule={quote.paymentSchedule} />
-          {quote.internalComment && <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/3"><h2 className="m-0 text-sm font-semibold text-slate-900">Comentario interno</h2><p className="mb-0 mt-2 text-sm leading-6 text-slate-600">{quote.internalComment}</p></section>}
-        </aside>
-
-        <main className="min-w-0">
-          <QuoteServices services={quote.services} />
-        </main>
+  return <div className="space-y-6">
+    <div className="flex flex-wrap items-center justify-between gap-3"><Link to="/cotizaciones" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600"><ArrowLeft size={16}/> Volver a cotizaciones</Link><div className="flex flex-wrap gap-2"><button type="button" onClick={() => { setDeleteError(''); setDeleteOpen(true) }} className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50"><Trash2 size={16}/> Eliminar</button><Link to={`/cotizaciones/${quote.id}/editar`} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white"><Pencil size={16}/> Editar cotización</Link></div></div>
+    {error && <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+    <header className="rounded-xl border border-l-4 border-slate-200 border-l-blue-600 bg-white p-5"><div className="flex flex-wrap items-start justify-between gap-5"><div><div className="flex items-center gap-3"><h1 className="m-0 text-2xl font-bold">{quote.holderName}</h1><QuoteStatusBadge status={quote.status}/></div><p className="mb-0 mt-2 font-semibold text-blue-700">{quote.folio}</p><p className="mb-0 mt-1 text-sm text-slate-500">Viaje a {quote.destination}</p></div><div className="flex flex-wrap gap-2"><Link to={`/cotizaciones/${quote.id}/documento`} className="inline-flex items-center gap-2 rounded-lg border px-3.5 py-2.5 text-sm font-semibold"><FileText size={16}/> Documento</Link><button onClick={() => setPaymentOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-sm font-semibold text-white"><CircleDollarSign size={16}/> Abonar</button></div></div></header>
+    <PassengersEditor title="Acompañantes de la cotización" passengers={quote.passengers} onChange={(items) => void syncPassengers(items)} />
+    <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[18rem_minmax(0,1fr)]"><aside className="space-y-4"><QuoteFinancialSummary publicPrice={quote.publicPrice} netPrice={quote.netPrice} totalPaid={quote.totalPaid} remainingBalance={quote.remainingBalance}/><QuoteSaleInfo sellerName={quote.sellerName} branch={quote.branch} saleDate={quote.saleDate} paymentLimitDate={quote.paymentLimitDate} settlementDate={quote.settlementDate} departureDate={quote.departureDate} returnDate={quote.returnDate}/><PaymentScheduleList schedule={quote.paymentSchedule}/>{quote.internalComment&&<section className="rounded-xl border bg-white p-5"><h2 className="m-0 text-sm font-semibold">Comentario interno</h2><p className="mb-0 mt-2 text-sm text-slate-600">{quote.internalComment}</p></section>}</aside><main><QuoteServices services={quote.services}/></main></div>
+    <section className="rounded-xl border bg-white p-5"><PaymentsHistory payments={payments}/></section>
+    <PaymentModal open={paymentOpen} quoteId={quote.id} folio={quote.folio} holderName={quote.holderName} publicPrice={quote.publicPrice} totalPaid={quote.totalPaid} remainingBalance={quote.remainingBalance} payments={payments} onClose={() => setPaymentOpen(false)} onSave={async (payment) => { await paymentsApi.create(quote.id,{date:new Date(`${payment.date}T12:00:00`).toISOString(),payment_type:payment.paymentType,currency:'MXN',amount:payment.amount,status:'confirmed',comment:payment.comment||null}); await load() }}/>
+    <ModalShell open={deleteOpen} title="Eliminar cotización" titleId="delete-quote-title" eyebrow="Acción permanente" maxWidthClass="max-w-lg" closeDisabled={deleting} onClose={() => setDeleteOpen(false)}>
+      <div className="space-y-4 p-6">
+        <p className="m-0 text-sm leading-6 text-slate-600">¿Seguro que deseas eliminar la cotización <strong className="text-slate-900">{quote.folio}</strong>? También se eliminarán sus pasajeros, servicios y plan de anticipos.</p>
+        {payments.length > 0 && <p className="m-0 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Esta cotización tiene pagos o abonos registrados. Por seguridad, no puede eliminarse; puedes cambiar su estado a cancelada.</p>}
+        {deleteError && <p className="m-0 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{deleteError}</p>}
       </div>
-
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/3">
-        <PaymentsHistory payments={localPayments} />
-      </section>
-
-      <PaymentModal
-        open={isPaymentModalOpen}
-        quoteId={quote.id}
-        folio={quote.folio}
-        holderName={quote.holderName}
-        publicPrice={quote.publicPrice}
-        totalPaid={totalPaid}
-        remainingBalance={remainingBalance}
-        payments={localPayments}
-        onClose={() => setIsPaymentModalOpen(false)}
-        onSave={(payment) => setLocalPayments((current) => [payment, ...current])}
-      />
-    </div>
-  )
+      <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+        <button type="button" disabled={deleting} onClick={() => setDeleteOpen(false)} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 disabled:opacity-50">Cancelar</button>
+        <button type="button" disabled={deleting || payments.length > 0} onClick={() => void handleDelete()} className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"><Trash2 size={16}/>{deleting ? 'Eliminando…' : 'Sí, eliminar'}</button>
+      </div>
+    </ModalShell>
+  </div>
 }

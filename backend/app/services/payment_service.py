@@ -37,12 +37,12 @@ def _validate_confirmed_amount(public_price: Decimal, other_confirmed: Decimal, 
         raise BusinessRuleError(f"El abono confirmado supera el saldo disponible de {available:.2f} MXN.")
 
 
-def create_payment(db: Session, quote_id: uuid.UUID, data: PaymentCreate) -> Payment:
+def create_payment(db: Session, quote_id: uuid.UUID, data: PaymentCreate, user_id: uuid.UUID) -> Payment:
     quote = get_quote_for_update(db, quote_id)
     recalculate_quote_financials(db, quote)
     _validate_confirmed_amount(quote.public_price, quote.total_paid, data)
 
-    payment = Payment(quote_id=quote_id, user_id=None, **data.model_dump())
+    payment = Payment(quote_id=quote_id, user_id=user_id, **data.model_dump())
     db.add(payment)
     try:
         db.flush()

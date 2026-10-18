@@ -1,8 +1,11 @@
 import { ArrowLeft, Compass, Printer } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { DocumentServices } from '../components/quotes/document/DocumentServices'
-import { quoteDetails } from '../data/quoteDetails'
-import type { PaymentScheduleStatus } from '../types/quote'
+import { ErrorState, LoadingState } from '../components/ui/AsyncState'
+import { mapQuoteDetail } from '../services/mappers'
+import { quotesApi } from '../services/quotesApi'
+import type { PaymentScheduleStatus, QuoteDetail } from '../types/quote'
 import { formatCurrency } from '../utils/currency'
 import { formatDate } from '../utils/date'
 
@@ -15,12 +18,17 @@ function DocumentBrand() {
 
 export function QuoteDocumentPage() {
   const { id } = useParams()
-  const quote = quoteDetails.find((item) => item.id === id)
+  const [quote, setQuote] = useState<QuoteDetail | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  useEffect(() => { if (!id) return; setLoading(true); quotesApi.get(id).then((data) => setQuote(mapQuoteDetail(data))).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'No fue posible cargar el documento.')).finally(() => setLoading(false)) }, [id])
+  if (loading) return <LoadingState label="Preparando documento…" />
+  if (error) return <ErrorState message={error} />
   if (!quote) return <section className="rounded-xl border border-slate-200 bg-white px-8 py-20 text-center shadow-sm shadow-slate-900/3"><h1 className="m-0 text-2xl font-bold text-slate-900">Documento no disponible</h1><p className="mb-0 mt-2 text-sm text-slate-500">No encontramos información para generar este documento.</p><Link to="/cotizaciones" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"><ArrowLeft size={16} aria-hidden="true" /> Volver a cotizaciones</Link></section>
 
   const generatedAt = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date())
 
-  return <div className="quote-document-screen -mx-8 -my-8 bg-slate-200 px-8 py-6">
+  return <div className="quote-document-screen -mx-4 -my-5 overflow-x-auto bg-slate-200 px-4 py-5 sm:-mx-6 sm:-my-6 sm:px-6 lg:-mx-8 lg:-my-8 lg:px-8 lg:py-6">
     <div className="document-actions mx-auto mb-4 flex max-w-[210mm] items-center justify-between gap-4"><Link to={`/cotizaciones/${quote.id}`} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-700"><ArrowLeft size={16} aria-hidden="true" /> Volver al detalle</Link><button type="button" onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"><Printer size={16} aria-hidden="true" /> Imprimir / Guardar PDF</button></div>
 
     <article className="document-page document-contract print-document">

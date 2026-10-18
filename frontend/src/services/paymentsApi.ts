@@ -1,0 +1,3 @@
+import type { ApiPayment } from '../types/api'; import { apiRequest } from './api'
+export type PaymentCreateInput = { date:string; payment_type:'cash'|'transfer'|'card'|'other'; currency:'MXN'; amount:number; status:'confirmed'; comment:string|null }
+export const paymentsApi = { list:(quoteId:string)=>apiRequest<ApiPayment[]>(`/quotes/${quoteId}/payments`), create:(quoteId:string,input:PaymentCreateInput)=>apiRequest<ApiPayment>(`/quotes/${quoteId}/payments`,{method:'POST',body:JSON.stringify(input)}), get:(quoteId:string,id:string)=>apiRequest<ApiPayment>(`/quotes/${quoteId}/payments/${id}`) }

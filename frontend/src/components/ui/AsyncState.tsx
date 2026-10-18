@@ -1,0 +1,3 @@
+import { AlertCircle, LoaderCircle } from 'lucide-react'
+export function LoadingState({ label='Cargando información…' }:{label?:string}) { return <div className="rounded-xl border border-slate-200 bg-white px-6 py-14 text-center text-sm text-slate-500"><LoaderCircle className="mx-auto mb-3 animate-spin text-blue-600" />{label}</div> }
+export function ErrorState({ message, onRetry }:{message:string;onRetry?:()=>void}) { return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-6 py-10 text-center"><AlertCircle className="mx-auto mb-3 text-red-600"/><p className="m-0 text-sm text-red-700">{message}</p>{onRetry&&<button onClick={onRetry} className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white">Reintentar</button>}</div> }

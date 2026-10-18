@@ -13,15 +13,15 @@ const schema = z.object({
 })
 
 type FormData = z.infer<typeof schema>
-type Props = { open: boolean; onClose: () => void; onSave: (client: Client) => void }
+type Props = { open: boolean; onClose: () => void; onSave: (client: Omit<Client, 'id'|'fullName'|'createdAt'|'status'>) => void | Promise<void> }
 const defaults: FormData = { firstName: '', lastName: '', phone: '', email: '', notes: '' }
 const fieldClass = 'mt-1.5 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-500 focus:ring-3 focus:ring-blue-100'
 
 export function ClientModal({ open, onClose, onSave }: Props) {
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: defaults })
   const close = () => { if (!isSubmitting) { reset(defaults); onClose() } }
-  const submit = (data: FormData) => {
-    onSave({ id: crypto.randomUUID(), ...data, fullName: `${data.firstName} ${data.lastName}`, createdAt: new Date().toISOString().slice(0, 10), status: 'active' })
+  const submit = async (data: FormData) => {
+    await onSave({ ...data })
     reset(defaults); onClose()
   }
   const error = (message?: string) => message && <span className="mt-1 block text-xs text-red-600">{message}</span>

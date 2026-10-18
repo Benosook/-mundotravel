@@ -75,9 +75,11 @@ export type QuoteGeneralInfoValue = {
   paymentLimitDate: string
   internalComment: string
   holder: string
+  departureDate: string
+  returnDate: string
 }
 
-export type QuoteGeneralInfoErrors = Partial<Record<'branch' | 'holder', string>>
+export type QuoteGeneralInfoErrors = Partial<Record<'branch' | 'holder' | 'departureDate' | 'returnDate', string>>
 
 export type QuoteStatus = 'active' | 'pending' | 'paid' | 'cancelled'
 
@@ -162,5 +164,6 @@ export type QuoteDetail = {
   passengers: Passenger[]
   paymentSchedule: PaymentScheduleItem[]
   services: QuoteService[]
+  payments?: Payment[]
 }
 

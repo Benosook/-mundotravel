@@ -1,82 +1,28 @@
 import { CalendarClock } from 'lucide-react'
-import { upcomingPayments } from '../../data/dashboard'
+import { useEffect, useState } from 'react'
+import { quotesApi } from '../../services/quotesApi'
+import type { ApiPaymentSchedule } from '../../types/api'
 import { formatCurrency } from '../../utils/currency'
+import { formatDate } from '../../utils/date'
+import { ErrorState, LoadingState } from '../ui/AsyncState'
 
-function getDaysStyle(days: number) {
-  if (days <= 3) return 'bg-red-50 text-red-700 ring-red-600/10'
-  if (days <= 12) return 'bg-orange-50 text-orange-700 ring-orange-600/10'
-  return 'bg-slate-100 text-slate-600 ring-slate-500/10'
-}
-
-function formatDays(days: number) {
-  if (days < 0) return `${days} días`
-  if (days === 0) return 'Hoy'
-  return `${days} días`
-}
+type Row = { id: string; client: string; folio: string; passengers: number; phone: string; installment: number; dueDate: string; daysRemaining: number; amount: number; status: ApiPaymentSchedule['status'] }
+const today = () => { const value = new Date(); value.setHours(0, 0, 0, 0); return value }
+const daysUntil = (date: string) => Math.round((new Date(`${date}T00:00:00`).getTime() - today().getTime()) / 86_400_000)
+const dayLabel = (days: number) => days === 0 ? 'Hoy' : `${Math.abs(days)} ${Math.abs(days) === 1 ? 'día' : 'días'}${days < 0 ? ' vencido' : ''}`
+const tone = (row: Row) => row.status === 'overdue' || row.daysRemaining < 0 ? 'bg-red-50 text-red-700 ring-red-600/10' : row.daysRemaining <= 7 ? 'bg-orange-50 text-orange-700 ring-orange-600/10' : 'bg-slate-100 text-slate-600 ring-slate-500/10'
 
 export function UpcomingPaymentsTable() {
-  return (
-    <section
-      aria-labelledby="upcoming-payments-title"
-      className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-900/3"
-    >
-      <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-        <div>
-          <h2 id="upcoming-payments-title" className="m-0 text-base font-semibold text-slate-900">
-            Próximos anticipos
-          </h2>
-          <p className="mb-0 mt-1 text-xs text-slate-500">
-            Pagos que requieren seguimiento durante las próximas semanas.
-          </p>
-        </div>
-        <div className="hidden items-center gap-2 text-xs font-medium text-slate-500 sm:flex">
-          <CalendarClock size={16} className="text-blue-600" aria-hidden="true" />
-          {upcomingPayments.length} anticipos
-        </div>
-      </div>
+  const [rows, setRows] = useState<Row[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  useEffect(() => { const load = async () => { setLoading(true); setError(''); try { const summaries = await quotesApi.list({ limit: 100 }); const quotes = await Promise.all(summaries.map((quote) => quotesApi.get(quote.id))); setRows(quotes.flatMap((quote) => quote.payment_schedule.filter((schedule) => schedule.status === 'pending' || schedule.status === 'overdue').map((schedule) => ({ id: schedule.id, client: quote.client.full_name, folio: quote.folio, passengers: quote.passengers.length, phone: quote.client.phone || '—', installment: schedule.installment_number, dueDate: schedule.due_date, daysRemaining: daysUntil(schedule.due_date), amount: Number(schedule.amount), status: schedule.status }))).sort((a, b) => a.dueDate.localeCompare(b.dueDate))) } catch (reason) { setError(reason instanceof Error ? reason.message : 'No fue posible cargar los próximos anticipos.') } finally { setLoading(false) } }; void load() }, [])
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-245 border-collapse text-left text-sm">
-          <thead>
-            <tr className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
-              <th className="px-5 py-3">Cliente</th>
-              <th className="px-4 py-3">Paquete</th>
-              <th className="px-4 py-3 text-center">Pasajeros</th>
-              <th className="px-4 py-3">Teléfono</th>
-              <th className="px-4 py-3 text-center">Anticipo</th>
-              <th className="px-4 py-3">Fecha límite</th>
-              <th className="px-4 py-3">Días restantes</th>
-              <th className="px-5 py-3 text-right">Pago pendiente</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {upcomingPayments.map((payment) => (
-              <tr key={payment.id} className="transition-colors hover:bg-slate-50/80">
-                <td className="whitespace-nowrap px-5 py-4 font-semibold text-slate-800">
-                  {payment.client}
-                </td>
-                <td className="whitespace-nowrap px-4 py-4 text-slate-600">{payment.packageName}</td>
-                <td className="px-4 py-4 text-center text-slate-600">{payment.passengers}</td>
-                <td className="whitespace-nowrap px-4 py-4 text-slate-600">{payment.phone}</td>
-                <td className="px-4 py-4 text-center font-medium text-slate-700">
-                  #{payment.installment}
-                </td>
-                <td className="whitespace-nowrap px-4 py-4 text-slate-600">{payment.dueDate}</td>
-                <td className="whitespace-nowrap px-4 py-4">
-                  <span
-                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${getDaysStyle(payment.daysRemaining)}`}
-                  >
-                    {formatDays(payment.daysRemaining)}
-                  </span>
-                </td>
-                <td className="whitespace-nowrap px-5 py-4 text-right font-semibold text-slate-900">
-                  {formatCurrency(payment.pendingAmount)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  )
+  return <section aria-labelledby="upcoming-payments-title" className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-900/3">
+    <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4 sm:px-5"><div><h2 id="upcoming-payments-title" className="m-0 text-base font-semibold text-slate-900">Próximos anticipos</h2><p className="mb-0 mt-1 text-xs text-slate-500">Anticipos pendientes registrados en las cotizaciones.</p></div><div className="hidden items-center gap-2 text-xs font-medium text-slate-500 sm:flex"><CalendarClock size={16} className="text-blue-600" />{rows.length} anticipos</div></div>
+    {loading ? <div className="p-5"><LoadingState label="Cargando próximos anticipos…" /></div> : error ? <div className="p-5"><ErrorState message={error} /></div> : rows.length === 0 ? <div className="px-6 py-14 text-center text-sm text-slate-500">No hay próximos anticipos.</div> : <>
+      <div className="divide-y divide-slate-100 sm:hidden">{rows.map((row) => <article key={row.id} className="space-y-3 p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="m-0 break-words font-semibold text-slate-900">{row.client}</p><p className="mb-0 mt-1 text-xs font-semibold text-blue-700">{row.folio} · Anticipo #{row.installment}</p></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${tone(row)}`}>{dayLabel(row.daysRemaining)}</span></div><dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm"><div><dt className="text-xs text-slate-400">Fecha límite</dt><dd className="m-0 mt-0.5 font-medium text-slate-700">{formatDate(row.dueDate)}</dd></div><div className="text-right"><dt className="text-xs text-slate-400">Monto</dt><dd className="m-0 mt-0.5 font-bold text-slate-900">{formatCurrency(row.amount)}</dd></div><div><dt className="text-xs text-slate-400">Teléfono</dt><dd className="m-0 mt-0.5 break-words text-slate-600">{row.phone}</dd></div><div className="text-right"><dt className="text-xs text-slate-400">Pasajeros</dt><dd className="m-0 mt-0.5 text-slate-600">{row.passengers}</dd></div></dl></article>)}</div>
+      <div className="hidden overflow-x-auto sm:block"><table className="w-full min-w-245 border-collapse text-left text-sm"><thead><tr className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500"><th className="px-5 py-3">Cliente</th><th className="px-4 py-3">Folio</th><th className="px-4 py-3 text-center">Pasajeros</th><th className="px-4 py-3">Teléfono</th><th className="px-4 py-3 text-center">Anticipo</th><th className="px-4 py-3">Fecha límite</th><th className="px-4 py-3">Estado</th><th className="px-5 py-3 text-right">Monto</th></tr></thead><tbody className="divide-y divide-slate-100">{rows.map((row) => <tr key={row.id} className="hover:bg-slate-50/80"><td className="whitespace-nowrap px-5 py-4 font-semibold text-slate-800">{row.client}</td><td className="px-4 py-4 font-medium text-blue-700">{row.folio}</td><td className="px-4 py-4 text-center text-slate-600">{row.passengers}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{row.phone}</td><td className="px-4 py-4 text-center font-medium">#{row.installment}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{formatDate(row.dueDate)}</td><td className="px-4 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${tone(row)}`}>{dayLabel(row.daysRemaining)}</span></td><td className="whitespace-nowrap px-5 py-4 text-right font-semibold">{formatCurrency(row.amount)}</td></tr>)}</tbody></table></div>
+    </>}
+  </section>
 }

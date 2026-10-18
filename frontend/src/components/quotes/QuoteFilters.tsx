@@ -10,7 +10,7 @@ type QuoteFiltersProps = {
 }
 
 const inputClass =
-  'mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-3 focus:ring-blue-100'
+  'mt-1.5 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-3 focus:ring-blue-100'
 
 const statuses: Array<{ value: QuoteStatus; label: string }> = [
   { value: 'active', label: 'Activa' },
@@ -62,7 +62,7 @@ export function QuoteFilters({ value, branches, sellers, onChange, onClear }: Qu
         </label>
 
         <div className="flex items-end">
-          <button type="button" onClick={onClear} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">
+          <button type="button" onClick={onClear} className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">
             <RotateCcw size={16} aria-hidden="true" />
             Limpiar filtros
           </button>

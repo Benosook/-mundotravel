@@ -48,3 +48,7 @@ class Payment(TimestampMixin, Base):
 
     quote: Mapped["Quote"] = relationship(back_populates="payments")
     user: Mapped["User | None"] = relationship(back_populates="payments")
+
+    @property
+    def user_name(self) -> str | None:
+        return self.user.name if self.user else None

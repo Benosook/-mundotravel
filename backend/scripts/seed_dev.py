@@ -2,12 +2,13 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.database.session import SessionLocal
+from app.core.config import settings
+from app.core.security import hash_password, verify_password
 from app.models.branch import Branch
 from app.models.user import User
 
 
 BRANCH_NAME = "+MundoTravel Principal"
-USER_EMAIL = "frida@mundotravel.local"
 
 
 def seed() -> None:
@@ -22,12 +23,12 @@ def seed() -> None:
             else:
                 branch_result = "existente"
 
-            user = db.scalar(select(User).where(User.email == USER_EMAIL))
+            user = db.scalar(select(User).where(User.email == settings.DEV_USER_EMAIL))
             if user is None:
                 user = User(
-                    name="Frida",
-                    email=USER_EMAIL,
-                    password_hash="AUTHENTICATION_NOT_IMPLEMENTED",
+                    name=settings.DEV_USER_NAME,
+                    email=settings.DEV_USER_EMAIL,
+                    password_hash=hash_password(settings.DEV_USER_PASSWORD),
                     role="agent",
                     branch_id=branch.id,
                 )
@@ -36,6 +37,12 @@ def seed() -> None:
                 user_result = "creado"
             else:
                 user_result = "existente"
+                if user.name != settings.DEV_USER_NAME:
+                    user.name = settings.DEV_USER_NAME
+                    user_result = "actualizado"
+                if not verify_password(settings.DEV_USER_PASSWORD, user.password_hash):
+                    user.password_hash = hash_password(settings.DEV_USER_PASSWORD)
+                    user_result = "actualizado"
 
             db.commit()
             print(f"Sucursal {branch_result}: {branch.id} - {branch.name}")

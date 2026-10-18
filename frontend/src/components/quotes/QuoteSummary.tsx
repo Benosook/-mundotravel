@@ -1,5 +1,5 @@
 import { ReceiptText, Trash2 } from 'lucide-react'
-import type { QuoteService } from '../../types/quote'
+import type { Passenger, QuoteService } from '../../types/quote'
 import { formatCurrency } from '../../utils/currency'
 import { formatLocalDateTime } from '../../utils/date'
 
@@ -12,6 +12,10 @@ type QuoteSummaryProps = {
   onRemoveService: (id: string) => void
   onCancel: () => void
   onSave: () => void
+  isSaving?: boolean
+  saveError?: string
+  holderName?: string
+  passengers?: Passenger[]
 }
 
 const typeLabels: Record<QuoteService['type'], string> = {
@@ -37,15 +41,20 @@ export function QuoteSummary({
   onRemoveService,
   onCancel,
   onSave,
+  isSaving = false,
+  saveError,
+  holderName,
+  passengers = [],
 }: QuoteSummaryProps) {
   return (
-    <aside className="sticky top-25 rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-900/3">
+    <aside className="rounded-xl border border-slate-200 bg-white shadow-sm shadow-slate-900/3 xl:sticky xl:top-25">
       <div className="border-b border-slate-200 px-5 py-4">
         <h2 className="m-0 text-base font-semibold text-slate-900">Resumen de cotización</h2>
         <p className="mb-0 mt-1 text-xs text-slate-500">Totales provisionales del paquete.</p>
       </div>
 
       <div className="space-y-5 p-5">
+        <div className="rounded-lg bg-slate-50 p-3 text-sm"><span className="block text-xs font-semibold uppercase text-slate-400">Titular</span><strong className="mt-1 block text-slate-800">{holderName || 'Sin seleccionar'}</strong>{passengers.length>0&&<div className="mt-3 border-t border-slate-200 pt-3"><span className="text-xs font-semibold text-slate-500">Acompañantes ({passengers.length})</span><ul className="mb-0 mt-2 space-y-1 p-0">{passengers.map(p=><li key={p.id} className="flex list-none justify-between gap-2 text-xs text-slate-600"><span>{p.name}</span><span>{p.age} años</span></li>)}</ul></div>}</div>
         <dl className="space-y-3 border-b border-slate-100 pb-5">
           <div className="flex items-center justify-between gap-4 text-sm">
             <dt className="text-slate-500">Precio neto</dt>
@@ -85,7 +94,7 @@ export function QuoteSummary({
                       <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
                         {typeLabels[service.type]}
                       </span>
-                      <p className="mb-0 mt-1 truncate text-sm font-semibold text-slate-800">
+                      <p className="mb-0 mt-1 break-words text-sm font-semibold text-slate-800">
                         {getServiceName(service)}
                       </p>
                     </div>
@@ -93,7 +102,7 @@ export function QuoteSummary({
                       type="button"
                       onClick={() => onRemoveService(service.id)}
                       aria-label={`Eliminar ${getServiceName(service)}`}
-                      className="grid size-8 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                      className="grid size-11 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600 sm:size-9"
                     >
                       <Trash2 size={16} aria-hidden="true" />
                     </button>
@@ -151,21 +160,23 @@ export function QuoteSummary({
             Cotización preparada correctamente
           </p>
         )}
+        {saveError && <p role="alert" className="m-0 rounded-lg bg-red-50 px-3 py-2.5 text-sm font-medium text-red-700">{saveError}</p>}
 
-        <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-5">
+        <div className="grid grid-cols-1 gap-3 border-t border-slate-100 pt-5 sm:grid-cols-2">
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            className="min-h-11 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={onSave}
-            className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+            disabled={isSaving}
+            className="min-h-11 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
           >
-            Guardar cotización
+            {isSaving ? 'Guardando…' : 'Guardar cotización'}
           </button>
         </div>
       </div>
