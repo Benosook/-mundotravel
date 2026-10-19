@@ -8,6 +8,7 @@ import { quotesApi } from '../services/quotesApi'
 import type { PaymentScheduleStatus, QuoteDetail } from '../types/quote'
 import { formatCurrency } from '../utils/currency'
 import { formatDate } from '../utils/date'
+import { getQuotePeopleCount } from '../utils/passengers'
 
 const paymentStatuses: Record<PaymentScheduleStatus, string> = { pending: 'Pendiente', paid: 'Pagado', overdue: 'Vencido' }
 const installmentNames = ['PRIMERO', 'SEGUNDO', 'TERCERO', 'CUARTO', 'QUINTO', 'SEXTO']
@@ -27,6 +28,7 @@ export function QuoteDocumentPage() {
   if (!quote) return <section className="rounded-xl border border-slate-200 bg-white px-8 py-20 text-center shadow-sm shadow-slate-900/3"><h1 className="m-0 text-2xl font-bold text-slate-900">Documento no disponible</h1><p className="mb-0 mt-2 text-sm text-slate-500">No encontramos información para generar este documento.</p><Link to="/cotizaciones" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"><ArrowLeft size={16} aria-hidden="true" /> Volver a cotizaciones</Link></section>
 
   const generatedAt = new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date())
+  const peopleCount = getQuotePeopleCount(quote.holderName, quote.passengers)
 
   return <div className="quote-document-screen -mx-4 -my-5 overflow-x-auto bg-slate-200 px-4 py-5 sm:-mx-6 sm:-my-6 sm:px-6 lg:-mx-8 lg:-my-8 lg:px-8 lg:py-6">
     <div className="document-actions mx-auto mb-4 flex max-w-[210mm] items-center justify-between gap-4"><Link to={`/cotizaciones/${quote.id}`} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-700"><ArrowLeft size={16} aria-hidden="true" /> Volver al detalle</Link><button type="button" onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"><Printer size={16} aria-hidden="true" /> Imprimir / Guardar PDF</button></div>
@@ -42,7 +44,7 @@ export function QuoteDocumentPage() {
 
       <DocumentServices services={quote.services} />
 
-      <section className="contract-summary print-block"><span>No. personas <strong>{quote.passengers.length}</strong></span><span>Fecha límite de pago: <strong>{formatDate(quote.paymentLimitDate)}</strong></span><span>Precio: <strong>{formatCurrency(quote.publicPrice)} MXN</strong></span></section>
+      <section className="contract-summary print-block"><span>No. personas <strong>{peopleCount}</strong></span><span>Fecha límite de pago: <strong>{formatDate(quote.paymentLimitDate)}</strong></span><span>Precio: <strong>{formatCurrency(quote.publicPrice)} MXN</strong></span></section>
 
       <h2 className="contract-terms-title">Términos y condiciones</h2>
       <section className="contract-terms print-block">

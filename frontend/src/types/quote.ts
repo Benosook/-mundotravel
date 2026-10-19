@@ -1,4 +1,11 @@
-export type ServiceType = 'hotel' | 'tour' | 'flight' | 'transport' | 'circuit'
+export type ServiceType =
+  | 'hotel'
+  | 'tour'
+  | 'flight'
+  | 'transport'
+  | 'cruise'
+  | 'circuit'
+  | 'extras'
 
 export type HotelService = {
   id: string
